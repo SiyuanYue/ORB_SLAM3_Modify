@@ -67,7 +67,7 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     else if(mSensor==STEREO)
         cout << "Stereo" << endl;                // 双目
     else if(mSensor==RGBD)
-        cout << "RGB-D" << endl;                 // RGBD相机   
+        cout << "RGB-D" << endl;                 // RGBD相机
     else if(mSensor==IMU_MONOCULAR)
         cout << "Monocular-Inertial" << endl;    // 单目 + imu
     else if(mSensor==IMU_STEREO)
@@ -97,6 +97,9 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
 
         cout << (*settings_) << endl;
     }
+    /* 我们的配置文件版本为1.0版本  LoadAtlasFromFile = ‘akm’  SaveAtlasToFile = ‘akm’
+     mStrLoadAtlasFromFile = ‘akm’
+     mStrSaveAtlasToFile = ‘akm’   */
     else
     {
         settings_ = nullptr;
@@ -126,6 +129,7 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     // ORBSLAM3新加的多地图管理功能，这里加载Atlas标识符
     bool loadedAtlas = false;
 
+    // 如果没有先验地图的话 mStrLoadAtlasFromFile = ‘akm’
     if(mStrLoadAtlasFromFile.empty())
     {
         //Load ORB Vocabulary
@@ -153,6 +157,8 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
         cout << "Initialization of Atlas from scratch " << endl;
         mpAtlas = new Atlas(0);
     }
+
+    // 如果有先验地图的话
     else
     {
         //Load ORB Vocabulary
@@ -431,7 +437,7 @@ Sophus::SE3f System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const
 
 /**
  * @brief 单目/单目VIO跟踪
- * 
+ *
  * @param[in] im                灰度图像
  * @param[in] timestamp         图像时间戳
  * @param[in] vImuMeas          上一帧到当前帧图像之间的IMU测量值
@@ -1549,7 +1555,7 @@ bool System::LoadAtlas(int type)
             cout << "Load file not found" << endl;
             return false;
         }
-        boost::archive::binary_iarchive ia(ifs);
+        boost::archive::binary_iarchive ia(ifs);//
         ia >> strFileVoc;
         ia >> strVocChecksum;
         ia >> mpAtlas;
