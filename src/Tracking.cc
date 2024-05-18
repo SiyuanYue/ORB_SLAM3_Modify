@@ -64,7 +64,7 @@ namespace ORB_SLAM3
  * @param _strSeqName 序列名字，没用到
  */
 Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer,
-    Atlas *pAtlas, KeyFrameDatabase* pKFDB, const string &strSettingPath, const int sensor,PointCloudMapping * pPointCloudMapping , Settings* settings, const string &_nameSeq)
+    Atlas *pAtlas, KeyFrameDatabase* pKFDB, const string &strSettingPath, const int sensor,std::shared_ptr<PointCloudMapping> pPointCloudMapping , Settings* settings, const string &_nameSeq)
     : mState(NO_IMAGES_YET), mSensor(sensor), mTrackedFr(0), mbStep(false),
     mbOnlyTracking(false), mbMapUpdated(false), mbVO(false), mpORBVocabulary(pVoc), mpKeyFrameDB(pKFDB),
     mbReadyToInitializate(false), mpSystem(pSys), mpViewer(NULL), bStepByStep(false),
@@ -3960,9 +3960,9 @@ void Tracking::CreateNewKeyFrame()
             //Verbose::PrintMess("new mps for stereo KF: " + to_string(nPoints), Verbose::VERBOSITY_NORMAL);
         }
     }
-    //稠密建图
-    if(mpSystem->densemapping)
-        mpPointCloudMapping->insertKeyFrame( pKF,this->mImRGB,this->mImDepth,mpAtlas->GetAllKeyFrames());
+    //稠密建图 
+    mpPointCloudMapping->insertKeyFrame(pKF,this->mImRGB,this->mImDepth);
+
     // Step 4：插入关键帧
     // 关键帧插入到列表 mlNewKeyFrames中，等待local mapping线程临幸
     mpLocalMapper->InsertKeyFrame(pKF);

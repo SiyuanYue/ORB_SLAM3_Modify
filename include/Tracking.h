@@ -60,7 +60,7 @@ class Tracking
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     Tracking(System* pSys, ORBVocabulary* pVoc, FrameDrawer* pFrameDrawer, MapDrawer* pMapDrawer, Atlas* pAtlas,
-             KeyFrameDatabase* pKFDB, const string &strSettingPath, const int sensor, PointCloudMapping * pPointCloudMapping , Settings* settings, const string &_nameSeq=std::string());
+             KeyFrameDatabase* pKFDB, const string &strSettingPath, const int sensor, std::shared_ptr<PointCloudMapping> pPointCloudMapping , Settings* settings, const string &_nameSeq=std::string());
 
     ~Tracking();
 
@@ -289,7 +289,7 @@ protected:
     bool bStepByStep;
 
     // 稠密建图线程
-    PointCloudMapping * mpPointCloudMapping;
+    std::shared_ptr<PointCloudMapping> mpPointCloudMapping;
 
     //Atlas
     Atlas* mpAtlas;
