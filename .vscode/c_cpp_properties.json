@@ -3,7 +3,10 @@
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceFolder}/**"
+                "${workspaceFolder}/**",
+                "/opt/ros/你的ros版本/include/",
+                "/usr/include/eigen3",
+                "/usr/include/pcl-1.10/"
             ],
             "defines": [
                 "_DEBUG",
@@ -12,9 +15,9 @@
             ],
             "windowsSdkVersion": "10.0.18362.0",
             "compilerPath": "/usr/bin/g++",
-            "cStandard": "c11",
+            "cStandard": "c14",
             "cppStandard": "c++17",
-            "intelliSenseMode": "msvc-x64"
+            "intelliSenseMode": "linux-gcc-x64"
         }
     ],
     "version": 4

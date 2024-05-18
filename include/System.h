@@ -39,7 +39,7 @@
 #include "Viewer.h"
 #include "ImuTypes.h"
 #include "Settings.h"
-
+#include "PointCloudMapping.h"
 
 namespace ORB_SLAM3
 {
@@ -102,7 +102,7 @@ public:
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     // Initialize the SLAM system. It launches the Local Mapping, Loop Closing and Viewer threads.
-    System(const string &strVocFile, const string &strSettingsFile, const eSensor sensor, const bool bUseViewer = true, const int initFr = 0, const string &strSequence = std::string());
+    System(const string &strVocFile, const string &strSettingsFile, const eSensor sensor, const bool bUseViewer = true,const int initFr = 0,const string &strSequence = std::string());
 
     // Proccess the given stereo frame. Images must be synchronized and rectified.
     // Input images: RGB (CV_8UC3) or grayscale (CV_8U). RGB is converted to grayscale.
@@ -191,7 +191,7 @@ public:
     void InsertResizeTime(double& time);
     void InsertTrackTime(double& time);
 #endif
-
+    bool densemapping;
 private:
 
     void SaveAtlas(int type);
@@ -211,6 +211,12 @@ private:
     // Map structure that stores the pointers to all KeyFrames and MapPoints.
     //Map* mpMap;
     Atlas* mpAtlas;
+
+
+    //稠密建图线程
+     shared_ptr<PointCloudMapping> mpPointCloudMapping;
+
+
 
     // Tracker. It receives a frame and computes the associated camera pose.
     // It also decides when to insert a new keyframe, create some new MapPoints and

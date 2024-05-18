@@ -49,12 +49,13 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "RGBD");
     ros::start();
 
-    if(argc != 3)
+    if(argc < 3)
     {
         cerr << endl << "Usage: rosrun ORB_SLAM3 RGBD path_to_vocabulary path_to_settings" << endl;
         ros::shutdown();
         return 1;
     }
+
 
     // Create SLAM system. It initializes all system threads and gets ready to process frames.
     ORB_SLAM3::System SLAM(argv[1],argv[2],ORB_SLAM3::System::RGBD,true);
@@ -72,6 +73,13 @@ int main(int argc, char **argv)
     message_filters::Synchronizer<sync_pol> sync(sync_pol(10), rgb_sub,depth_sub);
     sync.registerCallback(boost::bind(&ImageGrabber::GrabRGBD,&igb,_1,_2));
 
+
+    CamPose_Pub = nh.advertise<geometry_msgs::PoseStamped>("/Camera_Pose",100);
+    Camodom_Pub = nh.advertise<geometry_msgs::PoseWithCovarianceStamped>("/Camera_Odom", 100);
+    tracking_img_pub = image_transport.advertise( "/ORB_SLAM3/tracking_image", 1);
+    tracked_mappoints_pub = nh.advertise<sensor_msgs::PointCloud2>( "/ORB_SLAM3/tracked_points", 1);
+    all_mappoints_pub = nh.advertise<sensor_msgs::PointCloud2>( "ORB_SLAM3/all_points", 1);
+    ros::ServiceServer service = nh.advertiseService("deactivate_localization", deactivateLocalizationCallback);
     ros::spin();
 
     // Stop all threads

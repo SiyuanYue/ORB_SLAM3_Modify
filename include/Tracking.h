@@ -38,6 +38,7 @@
 #include "Settings.h"
 
 #include "GeometricCamera.h"
+#include "PointCloudMapping.h"
 
 #include <mutex>
 #include <unordered_set>
@@ -54,12 +55,12 @@ class System;
 class Settings;
 
 class Tracking
-{  
+{
 
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     Tracking(System* pSys, ORBVocabulary* pVoc, FrameDrawer* pFrameDrawer, MapDrawer* pMapDrawer, Atlas* pAtlas,
-             KeyFrameDatabase* pKFDB, const string &strSettingPath, const int sensor, Settings* settings, const string &_nameSeq=std::string());
+             KeyFrameDatabase* pKFDB, const string &strSettingPath, const int sensor, PointCloudMapping * pPointCloudMapping , Settings* settings, const string &_nameSeq=std::string());
 
     ~Tracking();
 
@@ -139,6 +140,10 @@ public:
     Frame mLastFrame;
 
     cv::Mat mImGray;
+
+    //add:
+    cv::Mat mImRGB;
+    cv::Mat mImDepth;
 
     // Initialization Variables (Monocular)
     std::vector<int> mvIniLastMatches;
@@ -273,15 +278,18 @@ protected:
     KeyFrame* mpReferenceKF;
     std::vector<KeyFrame*> mvpLocalKeyFrames;
     std::vector<MapPoint*> mvpLocalMapPoints;
-    
+
     // System
     System* mpSystem;
-    
+
     //Drawers
     Viewer* mpViewer;
     FrameDrawer* mpFrameDrawer;
     MapDrawer* mpMapDrawer;
     bool bStepByStep;
+
+    // 稠密建图线程
+    PointCloudMapping * mpPointCloudMapping;
 
     //Atlas
     Atlas* mpAtlas;

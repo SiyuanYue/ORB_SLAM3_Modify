@@ -12,14 +12,14 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall   -O3")
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -march=native")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
 
-# Check C++11 or C++0x support
+# Check C++14 or C++0x support
 include(CheckCXXCompilerFlag)
-CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
+CHECK_CXX_COMPILER_FLAG("-std=c++14" COMPILER_SUPPORTS_CXX14)
 CHECK_CXX_COMPILER_FLAG("-std=c++0x" COMPILER_SUPPORTS_CXX0X)
-if(COMPILER_SUPPORTS_CXX11)
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-   add_definitions(-DCOMPILEDWITHC11)
-   message(STATUS "Using flag -std=c++11.")
+if(COMPILER_SUPPORTS_CXX14)
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
+   add_definitions(-DCOMPILEDWITHC14)
+   message(STATUS "Using flag -std=c++14.")
 elseif(COMPILER_SUPPORTS_CXX0X)
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
    add_definitions(-DCOMPILEDWITHC0X)
@@ -32,9 +32,9 @@ LIST(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules)
 
 # 要保证整个工程的opencv版本一致，包括dbow，源码以及ros相关的
 # 3 4 都可以正常运行
-find_package(OpenCV 3.2)
+find_package(OpenCV 4.4)
    if(NOT OpenCV_FOUND)
-      message(FATAL_ERROR "OpenCV > 3.2 not found.")
+      message(FATAL_ERROR "OpenCV > 4.4 not found.")
    endif()
 
 MESSAGE("OPENCV VERSION:")
@@ -43,6 +43,23 @@ MESSAGE(${OpenCV_VERSION})
 find_package(Eigen3 3.3.0 REQUIRED)
 find_package(Pangolin REQUIRED)
 find_package(realsense2)
+# find_package(sensor_msgs)
+# set(catkin_DIR /opt/ros/noetic/share/catkin/cmake) #DIR后面是catkinconfig路径   melodic
+# find_package(catkin REQUIRED)
+
+
+# find_package(catkin REQUIRED COMPONENTS
+#   roscpp
+#   sensor_msgs
+#   std_msgs
+#   pcl_msgs
+# )
+find_package(octomap REQUIRED)
+
+find_package(PCL REQUIRED)
+
+find_package(Boost REQUIRED COMPONENTS filesystem program_options)
+
 
 include_directories(
 ${PROJECT_SOURCE_DIR}
@@ -51,7 +68,13 @@ ${PROJECT_SOURCE_DIR}/include/CameraModels
 ${PROJECT_SOURCE_DIR}/Thirdparty/Sophus
 ${EIGEN3_INCLUDE_DIR}
 ${Pangolin_INCLUDE_DIRS}
+${PCL_INCLUDE_DIRS}
+# ${catkin_INCLUDE_DIRS}
+${OCTOMAP_INCLUDE_DIRS}
 )
+# FOR PCL
+add_definitions( ${PCL_DEFINITIONS} )
+link_directories( ${PCL_LIBRARY_DIRS} )
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
 
@@ -84,6 +107,7 @@ src/GeometricTools.cc
 src/TwoViewReconstruction.cc
 src/Config.cc
 src/Settings.cc
+src/PointCloudMapping.cc
 include/System.h
 include/Tracking.h
 include/LocalMapping.h
@@ -113,7 +137,9 @@ include/GeometricTools.h
 include/TwoViewReconstruction.h
 include/SerializationUtils.h
 include/Config.h
-include/Settings.h)
+include/Settings.h
+include/PointCloudMapping.h
+)
 
 add_subdirectory(Thirdparty/g2o)
 
@@ -123,8 +149,13 @@ ${EIGEN3_LIBS}
 ${Pangolin_LIBRARIES}
 ${PROJECT_SOURCE_DIR}/Thirdparty/DBoW2/lib/libDBoW2.so
 ${PROJECT_SOURCE_DIR}/Thirdparty/g2o/lib/libg2o.so
+${PCL_LIBRARIES}
+# ${catkin_LIBRARIES}
+${OCTOMAP_LIBRARIES}
+
 -lboost_serialization
 -lcrypto
+
 )
 
 # If RealSense SDK is found the library is added and its examples compiled

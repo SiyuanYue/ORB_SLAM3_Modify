@@ -45,7 +45,7 @@ using namespace std;
 // "s"表示set类型
 // "v"表示vector数据类型
 // 'l'表示list数据类型
-// "KF"表示KeyFrame数据类型 
+// "KF"表示KeyFrame数据类型
 
 namespace ORB_SLAM3
 {
@@ -64,12 +64,12 @@ namespace ORB_SLAM3
  * @param _strSeqName 序列名字，没用到
  */
 Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer,
-    Atlas *pAtlas, KeyFrameDatabase* pKFDB, const string &strSettingPath, const int sensor, Settings* settings, const string &_nameSeq)
+    Atlas *pAtlas, KeyFrameDatabase* pKFDB, const string &strSettingPath, const int sensor,PointCloudMapping * pPointCloudMapping , Settings* settings, const string &_nameSeq)
     : mState(NO_IMAGES_YET), mSensor(sensor), mTrackedFr(0), mbStep(false),
     mbOnlyTracking(false), mbMapUpdated(false), mbVO(false), mpORBVocabulary(pVoc), mpKeyFrameDB(pKFDB),
     mbReadyToInitializate(false), mpSystem(pSys), mpViewer(NULL), bStepByStep(false),
     mpFrameDrawer(pFrameDrawer), mpMapDrawer(pMapDrawer), mpAtlas(pAtlas), mnLastRelocFrameId(0), time_recently_lost(5.0),
-    mnInitialFrameId(0), mbCreatedMap(false), mnFirstFrameId(0), mpCamera2(nullptr), mpLastKeyFrame(static_cast<KeyFrame*>(NULL))
+    mnInitialFrameId(0), mbCreatedMap(false), mnFirstFrameId(0), mpCamera2(nullptr), mpLastKeyFrame(static_cast<KeyFrame*>(NULL)) ,mpPointCloudMapping(pPointCloudMapping)
 {
     // Load camera parameters from settings file
     // Step 1 从配置文件中加载相机参数
@@ -1613,8 +1613,9 @@ Sophus::SE3f Tracking::GrabImageStereo(const cv::Mat &imRectLeft, const cv::Mat 
 Sophus::SE3f Tracking::GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, const double &timestamp, string filename)
 {
     mImGray = imRGB;
+    mImRGB=imRGB;
     cv::Mat imDepth = imD;
-
+    mImDepth=imDepth;
     // step 1：将RGB或RGBA图像转为灰度图像
     if(mImGray.channels()==3)
     {
@@ -1656,11 +1657,11 @@ Sophus::SE3f Tracking::GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, co
 
 /**
  * @brief 输入左目RGB或RGBA图像，输出世界坐标系到该帧相机坐标系的变换矩阵
- * 
+ *
  * @param im 图像
  * @param timestamp 时间戳
  * @param filename 文件名字，貌似调试用的
- * 
+ *
  * Step 1 ：将彩色图像转为灰度图像
  * Step 2 ：构造Frame
  * Step 3 ：跟踪
@@ -1725,7 +1726,7 @@ Sophus::SE3f Tracking::GrabImageMonocular(const cv::Mat &im, const double &times
 
 /**
  * @brief 将imu数据存放在mlQueueImuData的list链表里
- * @param[in] imuMeasurement 
+ * @param[in] imuMeasurement
  */
 void Tracking::GrabImuData(const IMU::Point &imuMeasurement)
 {
@@ -1885,9 +1886,9 @@ void Tracking::PreintegrateIMU()
  * 两个地方用到：
  * 1. 匀速模型计算速度,但并没有给当前帧位姿赋值；
  * 2. 跟踪丢失时不直接判定丢失，通过这个函数预测当前帧位姿看看能不能拽回来，代替纯视觉中的重定位
- * 
- * @return true 
- * @return false 
+ *
+ * @return true
+ * @return false
  */
 bool Tracking::PredictStateIMU()
 {
@@ -1914,12 +1915,12 @@ bool Tracking::PredictStateIMU()
         const Eigen::Vector3f Gz(0, 0, -IMU::GRAVITY_VALUE);
         const float t12 = mpImuPreintegratedFromLastKF->dT;
 
-        // 计算当前帧在世界坐标系的位姿,原理都是用预积分的位姿（预积分的值不会变化）与上一帧的位姿（会迭代变化）进行更新 
+        // 计算当前帧在世界坐标系的位姿,原理都是用预积分的位姿（预积分的值不会变化）与上一帧的位姿（会迭代变化）进行更新
         // 旋转 R_wb2 = R_wb1 * R_b1b2
         Eigen::Matrix3f Rwb2 = IMU::NormalizeRotation(Rwb1 * mpImuPreintegratedFromLastKF->GetDeltaRotation(mpLastKeyFrame->GetImuBias()));
         // 位移
         Eigen::Vector3f twb2 = twb1 + Vwb1*t12 + 0.5f*t12*t12*Gz+ Rwb1*mpImuPreintegratedFromLastKF->GetDeltaPosition(mpLastKeyFrame->GetImuBias());
-        // 速度 
+        // 速度
         Eigen::Vector3f Vwb2 = Vwb1 + t12*Gz + Rwb1 * mpImuPreintegratedFromLastKF->GetDeltaVelocity(mpLastKeyFrame->GetImuBias());
         // 设置当前帧的世界坐标系的相机位姿
         mCurrentFrame.SetImuPoseVelocity(Rwb2,twb2,Vwb2);
@@ -1963,7 +1964,7 @@ void Tracking::ResetFrameIMU()
 /**
  * @brief 跟踪过程，包括恒速模型跟踪、参考关键帧跟踪、局部地图跟踪
  * track包含两部分：估计运动、跟踪局部地图
- * 
+ *
  * Step 1：初始化
  * Step 2：跟踪
  * Step 3：记录位姿信息，用于轨迹复现
@@ -2184,7 +2185,7 @@ void Tracking::Track()
                     else if(pCurrentMap->KeyFramesInMap()>10)
                     {
                         // cout << "KF in map: " << pCurrentMap->KeyFramesInMap() << endl;
-                        // 条件1：当前地图中关键帧数目较多（大于10） 
+                        // 条件1：当前地图中关键帧数目较多（大于10）
                         // 条件2（隐藏条件）：当前帧距离上次重定位帧超过1s（说明还比较争气，值的救）或者非IMU模式
                         // 同时满足条件1，2，则将状态标记为RECENTLY_LOST，后面会结合IMU预测的位姿看看能不能拽回来
                         mState = RECENTLY_LOST;
@@ -2584,7 +2585,7 @@ void Tracking::Track()
             // 作者这里说允许在BA中被Huber核函数判断为外点的传入新的关键帧中，让后续的BA来审判他们是不是真正的外点
             // 但是估计下一帧位姿的时候我们不想用这些外点，所以删掉
 
-            //  Step 9.5 删除那些在BA中检测为外点的地图点  
+            //  Step 9.5 删除那些在BA中检测为外点的地图点
             for(int i=0; i<mCurrentFrame.N;i++)
             {
                 if(mCurrentFrame.mvpMapPoints[i] && mCurrentFrame.mvbOutlier[i])
@@ -2806,7 +2807,7 @@ void Tracking::StereoInitialization()
  *
  * 并行地计算基础矩阵和单应性矩阵，选取其中一个模型，恢复出最开始两帧之间的相对姿态以及点云
  * 得到初始两帧的匹配、相对运动、初始MapPoints
- * 
+ *
  * Step 1：（未创建）得到用于初始化的第一帧，初始化需要两帧
  * Step 2：（已创建）如果当前帧特征点数大于100，则得到用于单目初始化的第二帧
  * Step 3：在mInitialFrame与mCurrentFrame中找匹配的特征点对
@@ -2915,7 +2916,7 @@ void Tracking::MonocularInitialization()
 
 /**
  * @brief 单目相机成功初始化后用三角化得到的点生成MapPoints
- * 
+ *
  */
 void Tracking::CreateInitialMapMonocular()
 {
@@ -2995,7 +2996,7 @@ void Tracking::CreateInitialMapMonocular()
     Verbose::PrintMess("New Map created with " + to_string(mpAtlas->MapPointsInMap()) + " points", Verbose::VERBOSITY_QUIET);
     Optimizer::GlobalBundleAdjustemnt(mpAtlas->GetCurrentMap(),20);
 
-    // Step 5 取场景的中值深度，用于尺度归一化 
+    // Step 5 取场景的中值深度，用于尺度归一化
     // 为什么是 pKFini 而不是 pKCur ? 答：都可以的，内部做了位姿变换了
     float medianDepth = pKFini->ComputeSceneMedianDepth(2);
     float invMedianDepth;
@@ -3015,7 +3016,7 @@ void Tracking::CreateInitialMapMonocular()
     // Step 6 将两帧之间的变换归一化到平均深度1的尺度下
     // Scale initial baseline
     Sophus::SE3f Tc2w = pKFcur->GetPose();
-    // x/z y/z 将z归一化到1 
+    // x/z y/z 将z归一化到1
     Tc2w.translation() *= invMedianDepth;
     pKFcur->SetPose(Tc2w);
 
@@ -3133,7 +3134,7 @@ void Tracking::CreateMapInAtlas()
 
 /*
  * @brief 检查上一帧中的地图点是否需要被替换
- * 
+ *
  * Local Mapping线程可能会将关键帧中某些地图点进行替换，由于tracking中需要用到上一帧地图点，所以这里检查并更新上一帧中被替换的地图点
  * @see LocalMapping::SearchInNeighbors()
  */
@@ -3159,14 +3160,14 @@ void Tracking::CheckReplacedInLastFrame()
 
 /*
  * @brief 用参考关键帧的地图点来对当前普通帧进行跟踪
- * 
+ *
  * Step 1：将当前普通帧的描述子转化为BoW向量
  * Step 2：通过词袋BoW加速当前帧与参考帧之间的特征点匹配
  * Step 3: 将上一帧的位姿态作为当前帧位姿的初始值
  * Step 4: 通过优化3D-2D的重投影误差来获得位姿
  * Step 5：剔除优化后的匹配点中的外点
  * @return 如果匹配数超10，返回true
- * 
+ *
  */
 bool Tracking::TrackReferenceKeyFrame()
 {
@@ -3254,7 +3255,7 @@ void Tracking::UpdateLastFrame()
     Sophus::SE3f Tlr = mlRelativeFramePoses.back();
     // 将上一帧的世界坐标系下的位姿计算出来
     // l:last, r:reference, w:world
-    // Tlw = Tlr*Trw 
+    // Tlw = Tlr*Trw
     mLastFrame.SetPose(Tlr * pRef->GetPose());
 
     // 如果上一帧为关键帧，或者单目/单目惯性，SLAM模式的情况，则退出
@@ -3458,14 +3459,14 @@ bool Tracking::TrackWithMotionModel()
 
 /**
  * @brief 用局部地图进行跟踪，进一步优化位姿
- * 
+ *
  * 1. 更新局部地图，包括局部关键帧和关键点
  * 2. 对局部MapPoints进行投影匹配
  * 3. 根据匹配对估计当前帧的姿态
  * 4. 根据姿态剔除误匹配
  * @return true if success
- * 
- * Step 1：更新局部关键帧mvpLocalKeyFrames和局部地图点mvpLocalMapPoints 
+ *
+ * Step 1：更新局部关键帧mvpLocalKeyFrames和局部地图点mvpLocalMapPoints
  * Step 2：在局部地图中查找与当前帧匹配的MapPoints, 其实也就是对局部地图点进行跟踪
  * Step 3：更新局部所有MapPoints后对位姿再次优化
  * Step 4：更新当前帧的MapPoints被观测程度，并统计跟踪局部地图的效果
@@ -3612,7 +3613,7 @@ bool Tracking::TrackLocalMap()
 
 /**
  * @brief 判断当前帧是否需要插入关键帧
- * 
+ *
  * Step 1：纯VO模式下不插入关键帧，如果局部地图被闭环检测使用，则不插入关键帧
  * Step 2：如果距离上一次重定位比较近，或者关键帧数目超出最大限制，不插入关键帧
  * Step 3：得到参考关键帧跟踪到的地图点数量
@@ -3665,7 +3666,7 @@ bool Tracking::NeedNewKeyFrame()
 
     // Tracked MapPoints in the reference keyframe
     // Step 4：得到参考关键帧跟踪到的地图点数量
-    // UpdateLocalKeyFrames 函数中会将与当前关键帧共视程度最高的关键帧设定为当前帧的参考关键帧 
+    // UpdateLocalKeyFrames 函数中会将与当前关键帧共视程度最高的关键帧设定为当前帧的参考关键帧
 
     // 地图点的最小观测次数
     int nMinObs = 3;
@@ -3721,13 +3722,13 @@ bool Tracking::NeedNewKeyFrame()
         thRefRatio = 0.9f;
     }*/
 
-    // 单目情况下插入关键帧的频率很高 
+    // 单目情况下插入关键帧的频率很高
     if(mSensor==System::MONOCULAR)
         thRefRatio = 0.9f;
 
     if(mpCamera2) thRefRatio = 0.75f;
 
-    // 单目+IMU情况下如果，匹配内点数目超过350，插入关键帧的频率可以适当降低  
+    // 单目+IMU情况下如果，匹配内点数目超过350，插入关键帧的频率可以适当降低
     if(mSensor==System::IMU_MONOCULAR)
     {
         if(mnMatchesInliers>350) // Points tracked from the local map
@@ -3818,7 +3819,7 @@ bool Tracking::NeedNewKeyFrame()
 /**
  * @brief 创建新的关键帧
  * 对于非单目的情况，同时创建新的MapPoints
- * 
+ *
  * Step 1：将当前帧构造成关键帧
  * Step 2：将当前关键帧设置为当前帧的参考关键帧
  * Step 3：对于双目或rgbd摄像头，为当前帧生成新的MapPoints
@@ -3891,7 +3892,7 @@ void Tracking::CreateNewKeyFrame()
             // Step 3.2：按照深度从小到大排序
             sort(vDepthIdx.begin(),vDepthIdx.end());
 
-            // Step 3.3：从中找出不是地图点的生成临时地图点 
+            // Step 3.3：从中找出不是地图点的生成临时地图点
             // 处理的近点的个数
             int nPoints = 0;
             for(size_t j=0; j<vDepthIdx.size();j++)
@@ -3959,7 +3960,9 @@ void Tracking::CreateNewKeyFrame()
             //Verbose::PrintMess("new mps for stereo KF: " + to_string(nPoints), Verbose::VERBOSITY_NORMAL);
         }
     }
-
+    //稠密建图
+    if(mpSystem->densemapping)
+        mpPointCloudMapping->insertKeyFrame( pKF,this->mImRGB,this->mImDepth,mpAtlas->GetAllKeyFrames());
     // Step 4：插入关键帧
     // 关键帧插入到列表 mlNewKeyFrames中，等待local mapping线程临幸
     mpLocalMapper->InsertKeyFrame(pKF);
@@ -4066,7 +4069,7 @@ void Tracking::SearchLocalPoints()
 /**
  * @brief 更新LocalMap
  *
- * 局部地图包括： 
+ * 局部地图包括：
  * 1、K1个关键帧、K2个临近关键帧和参考关键帧
  * 2、由这些关键帧观测到的MapPoints
  */
@@ -4122,7 +4125,7 @@ void Tracking::UpdateLocalPoints()
 /**
  * @brief 跟踪局部地图函数里，更新局部关键帧
  * 方法是遍历当前帧的地图点，将观测到这些地图点的关键帧和相邻的关键帧及其父子关键帧，作为mvpLocalKeyFrames
- * Step 1：遍历当前帧的地图点，记录所有能观测到当前帧地图点的关键帧 
+ * Step 1：遍历当前帧的地图点，记录所有能观测到当前帧地图点的关键帧
  * Step 2：更新局部关键帧（mvpLocalKeyFrames），添加局部关键帧包括以下3种类型
  *      类型1：能观测到当前帧地图点的关键帧，也称一级共视关键帧
  *      类型2：一级共视关键帧的共视关键帧，称为二级共视关键帧
@@ -4222,7 +4225,7 @@ void Tracking::UpdateLocalKeyFrames()
     }
 
     // Include also some not-already-included keyframes that are neighbors to already-included keyframes
-    // Step 2.2 遍历一级共视关键帧，寻找更多的局部关键帧 
+    // Step 2.2 遍历一级共视关键帧，寻找更多的局部关键帧
     for(vector<KeyFrame*>::const_iterator itKF=mvpLocalKeyFrames.begin(), itEndKF=mvpLocalKeyFrames.end(); itKF!=itEndKF; itKF++)
     {
         // Limit the number of keyframes
@@ -4311,9 +4314,9 @@ void Tracking::UpdateLocalKeyFrames()
 
 /**
  * @details 重定位过程
- * @return true 
- * @return false 
- * 
+ * @return true
+ * @return false
+ *
  * Step 1：计算当前帧特征点的词袋向量
  * Step 2：找到与当前帧相似的候选关键帧
  * Step 3：通过BoW进行匹配
@@ -4487,7 +4490,7 @@ bool Tracking::Relocalization()
 
                         // If many inliers but still not enough, search by projection again in a narrower window
                         // the camera has been already optimized with many points
-                        // Step 4.4：如果BA后内点数还是比较少(<50)但是还不至于太少(>30)，可以挽救一下, 最后垂死挣扎 
+                        // Step 4.4：如果BA后内点数还是比较少(<50)但是还不至于太少(>30)，可以挽救一下, 最后垂死挣扎
                         // 重新执行上一步 4.3的过程，只不过使用更小的搜索窗口
                         // 这里的位姿已经使用了更多的点进行了优化,应该更准，所以使用更小的窗口搜索
                         if(nGood>30 && nGood<50)

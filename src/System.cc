@@ -209,6 +209,22 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     if (mSensor==IMU_STEREO || mSensor==IMU_MONOCULAR || mSensor==IMU_RGBD)
         mpAtlas->SetInertialSensor();
 
+
+
+// RGBD下启动稠密建图线程
+    if(mSensor == RGBD)
+        {
+            mpPointCloudMapping = make_shared<PointCloudMapping>(0.01);
+
+            //参数设置 TODO
+            cout << "进行ROS下RGBD稠密重建"  << endl;
+
+        }
+
+
+
+
+
     // Step 6 依次创建跟踪、局部建图、闭环、显示线程
     //Create Drawers. These are used by the Viewer
     // 创建用于显示帧和地图的类，由Viewer调用
@@ -220,7 +236,7 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     // 创建跟踪线程（主线程）,不会立刻开启,会在对图像和imu预处理后在main主线程种执行
     cout << "Seq. Name: " << strSequence << endl;
     mpTracker = new Tracking(this, mpVocabulary, mpFrameDrawer, mpMapDrawer,
-                             mpAtlas, mpKeyFrameDatabase, strSettingsFile, mSensor, settings_, strSequence);
+                             mpAtlas, mpKeyFrameDatabase, strSettingsFile, mSensor,mpPointCloudMapping, settings_, strSequence);
 
     //Initialize the Local Mapping thread and launch
     //创建并开启local mapping线程
@@ -234,7 +250,6 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
         mpLocalMapper->mThFarPoints = settings_->thFarPoints();
     else
         mpLocalMapper->mThFarPoints = fsSettings["thFarPoints"];
-    // ? 这里有个疑问,C++中浮点型跟0比较是否用精确?
     if(mpLocalMapper->mThFarPoints!=0)
     {
         cout << "Discard points further than " << mpLocalMapper->mThFarPoints << " m from current camera" << endl;
@@ -265,7 +280,6 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     //Initialize the Viewer thread and launch
     // 创建并开启显示线程
     if(bUseViewer)
-    //if(false) // TODO
     {
         mpViewer = new Viewer(this, mpFrameDrawer,mpMapDrawer,mpTracker,strSettingsFile,settings_);
         mptViewer = new thread(&Viewer::Run, mpViewer);
@@ -273,6 +287,7 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
         mpLoopCloser->mpViewer = mpViewer;
         mpViewer->both = mpFrameDrawer->both;
     }
+
 
     // Fix verbosity
     // 打印输出中间的信息，设置为安静模式
@@ -584,6 +599,11 @@ void System::Shutdown()
 
     mpLocalMapper->RequestFinish();
     mpLoopCloser->RequestFinish();
+
+    //稠密建图线程终止，会保存点云地图
+    mpPointCloudMapping->shutdown();
+
+
     /*if(mpViewer)
     {
         mpViewer->RequestFinish();
