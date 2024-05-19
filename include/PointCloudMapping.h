@@ -117,11 +117,7 @@ private:
     std::vector<KeyFrame *> keyframes;//关键帧
     std::vector<cv::Mat> colorImgs;// rgb图像
     std::vector<cv::Mat> depthImgs;// 深度
-//--
-    vector<cv::Mat>         colorImgks;
-    vector<cv::Mat>         depthImgks;
-    vector<int>             ids;
-//--
+
 
     // 线程锁
     std::mutex keyframeMutex;

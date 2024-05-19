@@ -46,7 +46,7 @@ using namespace std;
 // "v"表示vector数据类型
 // 'l'表示list数据类型
 // "KF"表示KeyFrame数据类型
-
+int idk=1
 namespace ORB_SLAM3
 {
 
@@ -2570,7 +2570,7 @@ void Tracking::Track()
             if(bNeedKF && (bOK || (mInsertKFsLost && mState==RECENTLY_LOST &&
                                    (mSensor == System::IMU_MONOCULAR || mSensor == System::IMU_STEREO || mSensor == System::IMU_RGBD))))
                 CreateNewKeyFrame();  // 创建关键帧，对于双目或RGB-D会产生新的地图点
-
+            idk++;
 #ifdef REGISTER_TIMES
             std::chrono::steady_clock::time_point time_EndNewKF = std::chrono::steady_clock::now();
 
@@ -3960,8 +3960,9 @@ void Tracking::CreateNewKeyFrame()
             //Verbose::PrintMess("new mps for stereo KF: " + to_string(nPoints), Verbose::VERBOSITY_NORMAL);
         }
     }
-    //稠密建图 
-    mpPointCloudMapping->insertKeyFrame(pKF,this->mImRGB,this->mImDepth);
+    //稠密建图
+    vector<KeyFrame*> vpKFs = this->mpAtlas->GetAllKeyFrames();
+    mpPointCloudMapping->insertKeyFrame(pKF,this->mImRGB,this->mImDepth,idk,vpKFs);
 
     // Step 4：插入关键帧
     // 关键帧插入到列表 mlNewKeyFrames中，等待local mapping线程临幸
