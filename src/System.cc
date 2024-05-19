@@ -213,13 +213,13 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
 
 // RGBD下启动稠密建图线程
     if(mSensor == RGBD)
-        {
-            mpPointCloudMapping = make_shared<PointCloudMapping>(0.01);
+    {
+        mpPointCloudMapping = make_shared<PointCloudMapping>(0.01);
 
-            //参数设置 TODO
-            cout << "进行ROS下RGBD稠密重建"  << endl;
+        //参数设置 TODO
+        cout << "进行ROS下RGBD稠密重建"  << endl;
 
-        }
+    }
 
 
 
@@ -261,7 +261,7 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     //Initialize the Loop Closing thread and launch
     // mSensor!=MONOCULAR && mSensor!=IMU_MONOCULAR
     // 创建并开启闭环线程
-    mpLoopCloser = new LoopClosing(mpAtlas, mpKeyFrameDatabase, mpVocabulary, mSensor!=MONOCULAR, activeLC); // mSensor!=MONOCULAR);
+    mpLoopCloser = new LoopClosing(mpAtlas, mpKeyFrameDatabase, mpVocabulary, mSensor!=MONOCULAR, activeLC,mpPointCloudMapping); // mSensor!=MONOCULAR);
     mptLoopClosing = new thread(&ORB_SLAM3::LoopClosing::Run, mpLoopCloser);
 
     //Set pointers between threads

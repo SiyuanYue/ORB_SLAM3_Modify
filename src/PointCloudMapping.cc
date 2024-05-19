@@ -1,10 +1,9 @@
 #include "PointCloudMapping.h"
 #include <pcl/common/projection_matrix.h>
-#include <pcl/io/pcd_io.h>
+
 #include <pcl/visualization/cloud_viewer.h>
 #include <opencv2/highgui/highgui.hpp>
 #include "Converter.h"
-#include <KeyFrame.h>
 
 namespace ORB_SLAM3{
 pcl::PointXYZ pcl_transform(const Eigen::Matrix4f &pose, const Eigen::Vector3f &p)
@@ -47,19 +46,28 @@ PointCloudMapping::~PointCloudMapping()
     // 析构函数
     // 确保线程正确终止和资源释放
 }
-void insertKeyFrame(KeyFrame *kf, cv::Mat &color, cv::Mat &depth)
+void insertKeyFrame(KeyFrame *kf, cv::Mat &color, cv::Mat &depth,int idk,vector<KeyFrame*> vpKFs )
 {
-    cout << "receive a keyframe, id = " << kf->mnId << endl;
+    cout << "receive a keyframe, id = "<<idk <<"   "<< kf->mnId << endl;
     unique_lock<mutex> lck(keyframeMutex);
     // 数据
+    currentvpKFs = vpKFs;
     keyframes.push_back(kf);
-    colorImgs.push_back(color.clone());
-    depthImgs.push_back(depth.clone());
+    // colorImgs.push_back(color.clone());
+    // depthImgs.push_back(depth.clone());
+
+
+    PointCloude pointcloude;
+    pointcloude.pcID = idk;
+    pointcloude.T = ORB_SLAM3::Converter::toSE3Quat( kf->GetPose() );
+    pointcloude.pcE = GetPointCloud(kf,color,depth);
+    pointcloud.push_back(pointcloude);
+
     // 线程阻塞
     keyFrameUpdated.notify_one();
 }
 // rgbd稠密建图
-PointCloud::Ptr GetPointCloud(KeyFrame *kf, cv::Mat &left, cv::Mat &depth)
+PointCloud::Ptr GetPointCloud(KeyFrame *kf, cv::Mat &color, cv::Mat &depth)
 {
     PointCloud::Ptr tmp(new PointCloud());
     // depth convert
@@ -86,12 +94,13 @@ PointCloud::Ptr GetPointCloud(KeyFrame *kf, cv::Mat &left, cv::Mat &depth)
             }
     }
     // get the transform point cloud
-    PointCloud::Ptr cloud(new PointCloud());
-    pcl::transformPointCloud(*tmp, *cloud, kf->GetPoseInverse().matrix());
-    cloud->is_dense = false;
-    // print
-    // cout << "generate point cloud for kf " << kf->mnId << ", size=" << cloud->points.size() << endl;
-    return cloud;
+    // PointCloud::Ptr cloud(new PointCloud());
+    // pcl::transformPointCloud(*tmp, *cloud, ORBSLAM3::Converter::toMatrix4d(kf->GetPoseInverse()));
+    // cloud->is_dense = false;
+    // // print
+    // // cout << "generate point cloud for kf " << kf->mnId << ", size=" << cloud->points.size() << endl;
+    // return cloud;
+    return tmp;
 }
 // 关闭本线程并调用save保存点云地图
 void shutdown()
@@ -130,39 +139,61 @@ void viewer()
             unique_lock<mutex> lck(keyframeMutex);
             N = keyframes.size();
         }
+        if(loopbusy || bStop)
+        {
+            continue;
+        }
+        if(lastKeyframeSize == N)
+            cloudbusy = false;
+        //cout<<"待处理点云个数 = "<<N<<endl;
+        cloudbusy = true;
+
+
         // PointCloud::Ptr all_p(new PointCloud());
-        PointCloud::Ptr p;
+
         // check the sensor so that decide the Point cloud generation method
         // rgbd
 
         for (size_t i = lastKeyframeSize; i < N; i++)
         {
-            p = GetPointCloud(keyframes[i], colorImgs[i], depthImgs[i]);
+            PointCloud::Ptr p;
+            // p = GetPointCloud(keyframes[i], colorImgs[i], depthImgs[i]);
+            pcl::transformPointCloud( *(pointcloud[i].pcE), *p, pointcloud[i].T.inverse().matrix());
             // addCoordinateSystem(pcl_viewer, keyframes[i]->GetPoseInverse().matrix(), std::to_string(i));
             (*globalMap) += *p;
         }
 
-        // voxel filter
-        // PointCloud::Ptr tmp(new PointCloud());
-        voxel.setInputCloud(globalMap);
-        voxel.filter(*globalMap);
+
+        PointCloud::Ptr tmp(new PointCloud());
+
         // outiler filter
         sor.setInputCloud(globalMap);
-        sor.filter(*globalMap);
+        sor.filter(*tmp);
+
+        // voxel filter
+        voxel.setInputCloud(globalMap);
+        voxel.filter(*globalMap);
+
+
+
         // print
         std::cout << "the num of points : " << globalMap->points.size() << std::endl;
         // add point cloud
         // pcl_viewer->removePointCloud();
         // pcl_viewer->addPointCloud(globalMap);
         // pcl_viewer->spinOnce(1000);
+
+
         cloud_viewer->showCloud(globalMap);
         lastKeyframeSize = N;
+        cloudbusy = false;
     }
 }
 void save()
 {
     if (this->globalMap != nullptr)
         pcl::io::savePCDFile("./PointCloudmapping.pcd", *globalMap);
+    std::cout<<"点云地图已保存"<<std::endl;
 }
 void addCoordinateSystem(std::shared_ptr<pcl::visualization::PCLVisualizer> viewer, const Eigen::Matrix4f &pose, const std::string &prefix)
 {
@@ -174,6 +205,43 @@ void addCoordinateSystem(std::shared_ptr<pcl::visualization::PCLVisualizer> view
     viewer->addLine<pcl::PointXYZ, pcl::PointXYZ>(pcl_transform(pose, o), pcl_transform(pose, x_axis), 1.0, 0.0, 0.0, prefix + "_x");
     viewer->addLine<pcl::PointXYZ, pcl::PointXYZ>(pcl_transform(pose, o), pcl_transform(pose, y_axis), 0.0, 1.0, 0.0, prefix + "_y");
     viewer->addLine<pcl::PointXYZ, pcl::PointXYZ>(pcl_transform(pose, o), pcl_transform(pose, z_axis), 0.0, 0.0, 1.0, prefix + "_z");
+}
+void updatecloud()
+{
+    if(!cloudbusy)
+	{
+		loopbusy = true;
+		cout<<"startloopmappoint"<<endl;
+        PointCloud::Ptr tmp1(new PointCloud);
+		for (int i=0;i<currentvpKFs.size();i++)
+		{
+		    for (int j=0;j<pointcloud.size();j++)
+		    {
+				if(pointcloud[j].pcID==currentvpKFs[i]->mnFrameId)
+				{
+
+					Eigen::Isometry3d T = ORB_SLAM3::Converter::toSE3Quat(currentvpKFs[i]->GetPose() );
+					PointCloud::Ptr cloud(new PointCloud);
+					pcl::transformPointCloud( *pointcloud[j].pcE, *cloud, T.inverse().matrix());
+					*tmp1 +=*cloud;
+
+					//cout<<"第pointcloud"<<j<<"与第vpKFs"<<i<<"匹配"<<endl;
+					continue;
+				}
+			}
+		}
+        cout<<"finishloopmap"<<endl;
+        PointCloud::Ptr tmp2(new PointCloud());
+        voxel.setInputCloud( tmp1 );
+        voxel.filter( *tmp2 );
+        globalMap->swap( *tmp2 );
+        //viewer.showCloud( globalMap );
+        loopbusy = false;
+        //cloudbusy = true;
+        loopcount++;
+
+        //*globalMap = *tmp1;
+	}
 }
 
 

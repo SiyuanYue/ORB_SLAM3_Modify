@@ -42,6 +42,8 @@ public:
     void GrabRGBD(const sensor_msgs::ImageConstPtr& msgRGB,const sensor_msgs::ImageConstPtr& msgD);
 
     ORB_SLAM3::System* mpSLAM;
+    bool do_rectify;
+    cv::Mat M1l,M2l,M1r,M2r;
 };
 
 int main(int argc, char **argv)
@@ -64,11 +66,8 @@ int main(int argc, char **argv)
 
     ros::NodeHandle nh;
 
-    // message_filters::Subscriber<sensor_msgs::Image> rgb_sub(nh, "/camera/rgb/image_raw", 100);
-    // message_filters::Subscriber<sensor_msgs::Image> depth_sub(nh, "/camera/depth_registered/image_raw", 100);
-    // 以下为tum rgbd 数据集的topic
-    message_filters::Subscriber<sensor_msgs::Image> rgb_sub(nh, "/camera/rgb/image_color", 100);
-    message_filters::Subscriber<sensor_msgs::Image> depth_sub(nh, "/camera/depth/image", 100);
+    message_filters::Subscriber<sensor_msgs::Image> rgb_sub(nh, "/camera/rgb/image_raw", 100);
+    message_filters::Subscriber<sensor_msgs::Image> depth_sub(nh, "/camera/depth_registered/image_raw", 100);
     typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image> sync_pol;
     message_filters::Synchronizer<sync_pol> sync(sync_pol(10), rgb_sub,depth_sub);
     sync.registerCallback(boost::bind(&ImageGrabber::GrabRGBD,&igb,_1,_2));
@@ -76,10 +75,11 @@ int main(int argc, char **argv)
 
     CamPose_Pub = nh.advertise<geometry_msgs::PoseStamped>("/Camera_Pose",100);
     Camodom_Pub = nh.advertise<geometry_msgs::PoseWithCovarianceStamped>("/Camera_Odom", 100);
-    tracking_img_pub = image_transport.advertise( "/ORB_SLAM3/tracking_image", 1);
-    tracked_mappoints_pub = nh.advertise<sensor_msgs::PointCloud2>( "/ORB_SLAM3/tracked_points", 1);
-    all_mappoints_pub = nh.advertise<sensor_msgs::PointCloud2>( "ORB_SLAM3/all_points", 1);
-    ros::ServiceServer service = nh.advertiseService("deactivate_localization", deactivateLocalizationCallback);
+
+    // tracking_img_pub = image_transport.advertise( "/ORB_SLAM3/tracking_image", 1);
+    // tracked_mappoints_pub = nh.advertise<sensor_msgs::PointCloud2>( "/ORB_SLAM3/tracked_points", 1);
+    // all_mappoints_pub = nh.advertise<sensor_msgs::PointCloud2>( "ORB_SLAM3/all_points", 1);
+    // ros::ServiceServer service = nh.advertiseService("deactivate_localization", deactivateLocalizationCallback);
     ros::spin();
 
     // Stop all threads

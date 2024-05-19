@@ -3,7 +3,7 @@
 
 #include "System.h"
 #include "Settings.h"
-
+#include "KeyFrame.h"
 
 #include <octomap/octomap.h>
 #include <octomap/Pointcloud.h>
@@ -13,6 +13,7 @@
 
 #include <opencv2/core.hpp>
 #include <pcl/common/transforms.h>
+#include <pcl/io/pcd_io.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -32,7 +33,16 @@
 
 
 namespace ORB_SLAM3{
-
+class PointCloude
+{
+    using PointCloud = pcl::PointCloud<pcl::PointXYZRGB>
+public:
+    PointCloud::Ptr pcE;
+public:
+    Eigen::Isometry3d T;
+    int pcID;
+//protected:
+};
 
 class PointCloudMapping
 {
@@ -45,11 +55,17 @@ public:
 
     // 插入keyframe，并且更新地图
     // rgbd
-    void insertKeyFrame(KeyFrame *kf, cv::Mat &color, cv::Mat &depth);
-
-
+    void insertKeyFrame(KeyFrame *kf, cv::Mat &color, cv::Mat &depth,int idk,vector<KeyFrame*> vpKFs );
+//--
+    vector<KeyFrame*> currentvpKFs;
+    bool cloudbusy;
+    bool loopbusy;
+    int loopcount=0;
+    void updatecloud();
+    bool bStop = false;
+//--
     // rgbd稠密建图
-    PointCloud::Ptr GetPointCloud(KeyFrame *kf, cv::Mat &left, cv::Mat &depth);
+    PointCloud::Ptr GetPointCloud(KeyFrame *kf, cv::Mat &color, cv::Mat &depth);
 
     // void insertKeyFrame(ORB_SLAM3::KeyFrame* kf, const cv::Mat& color, const cv::Mat& depth, std::vector<ORB_SLAM3::KeyFrame*> vpKFs);
     // void updatecloud(ORB_SLAM3::Map& curMap);
@@ -93,10 +109,19 @@ private:
     std::condition_variable keyFrameUpdated;
     std::mutex keyFrameUpdateMutex;
 
+//---
+    vector<PointCloude>     pointcloud;
+//---
+
     // 生成点云的数据
     std::vector<KeyFrame *> keyframes;//关键帧
     std::vector<cv::Mat> colorImgs;// rgb图像
     std::vector<cv::Mat> depthImgs;// 深度
+//--
+    vector<cv::Mat>         colorImgks;
+    vector<cv::Mat>         depthImgks;
+    vector<int>             ids;
+//--
 
     // 线程锁
     std::mutex keyframeMutex;
@@ -113,30 +138,7 @@ private:
     // 单位
     double unit = 1000; //defalut mm
 
-
-    // // 数据成员和成员函数声明
-    // double mResolution;
-    // int mCx, mCy, mFx, mFy;
-    // bool mbShutdown, mbFinish;
-    // pcl::VoxelGrid<pcl::PointXYZRGBA> voxel;
-    // pcl::StatisticalOutlierRemoval<pcl::PointXYZRGBA> statistical_filter;
-    // boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGBA>> mPointCloud;
-    // std::thread viewerThread;
-    // std::mutex mKeyFrameMtx, shutDownMutex, updateMutex, keyframeMutex, mMutexGlobalMap;
-    // std::condition_variable mKeyFrameUpdatedCond;
-    // std::list<ORB_SLAM3::KeyFrame*> mvKeyFrames;
-    // std::vector<cv::Mat> mvColorImgs, mvDepthImgs;
-    // std::vector<ORB_SLAM3::KeyFrame*> keyframes;
-    // std::vector<ORB_SLAM3::KeyFrame*> currentvpKFs;
-    // bool bStop, mabIsUpdating;
-
-    // // ROS相关
-    // ros::Publisher pclPoint_pub, pclPoint_local_pub, octomap_pub;
-    // sensor_msgs::PointCloud2 pcl_point, pcl_local_point;
-    // pcl::PointCloud<pcl::PointXYZRGBA> pcl_cloud_local_kf, pcl_cloud_kf;
 };
-
-
 
 }
 #endif // POINTCLOUDMAPPING_H_
