@@ -46,7 +46,7 @@ using namespace std;
 // "v"表示vector数据类型
 // 'l'表示list数据类型
 // "KF"表示KeyFrame数据类型
-int idk=1
+int idk=1;
 namespace ORB_SLAM3
 {
 

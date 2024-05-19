@@ -35,7 +35,7 @@
 namespace ORB_SLAM3{
 class PointCloude
 {
-    using PointCloud = pcl::PointCloud<pcl::PointXYZRGB>
+    using PointCloud = pcl::PointCloud<pcl::PointXYZRGB>;
 public:
     PointCloud::Ptr pcE;
 public:
@@ -47,10 +47,11 @@ public:
 class PointCloudMapping
 {
 public:
-    using PointCloud = pcl::PointCloud<pcl::PointXYZRGB>
+    using PointCloud = pcl::PointCloud<pcl::PointXYZRGB>;
     //  ORB3_dense 构造函数
+    //PointCloudMapping(double resolution_);
     PointCloudMapping(double resolution_,double meank_=10,double stdthresh_=1,double unit_=1000);
-    ~PointCloudMapping();
+    
 
 
     // 插入keyframe，并且更新地图

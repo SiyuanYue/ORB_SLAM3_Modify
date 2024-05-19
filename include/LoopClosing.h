@@ -32,6 +32,7 @@
 #include <thread>
 #include <mutex>
 #include "Thirdparty/g2o/g2o/types/types_seven_dof_expmap.h"
+#include "PointCloudMapping.h"
 
 namespace ORB_SLAM3
 {

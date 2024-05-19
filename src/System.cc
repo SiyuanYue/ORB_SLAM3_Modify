@@ -214,7 +214,7 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
 // RGBD下启动稠密建图线程
     if(mSensor == RGBD)
     {
-        mpPointCloudMapping = make_shared<PointCloudMapping>(0.01);
+        mpPointCloudMapping = make_shared<PointCloudMapping>(0.01,10,1,1000);
 
         //参数设置 TODO
         cout << "进行ROS下RGBD稠密重建"  << endl;

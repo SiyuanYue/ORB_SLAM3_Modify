@@ -15,24 +15,48 @@ pcl::PointXYZ pcl_transform(const Eigen::Matrix4f &pose, const Eigen::Vector3f &
     return pcl::PointXYZ(e_p(0), e_p(1), e_p(2));
 }
 
-
-PointCloudMapping(double resolution_,double meank_=10,double stdthresh_=1,double unit_=1000):resolution(resolution_),meank(meank_),stdthresh(stdthresh_),unit(unit_)
+/*
+PointCloudMapping(double resolution_):resolution(resolution_),meank(10),stdthresh(1),unit(1000)
 {
     std::cout<<"initializa with disp images !"<<std::endl;
     // 体素采样
-    std::cout << "the resolution of Point cloud Voxel filter : " << resolution_ << std::endl;
+    std::cout << "the resolution of Point cloud Voxel filter : " << resolution << std::endl;
     // this->resolution = resolution_;
     voxel.setLeafSize(resolution, resolution, resolution);
     // 离群滤波
     std::cout << "the Point cloud Outlier filter params :   \n"
-              << "meank : " << meank_ << std::endl
-              << "stdthresh :" << stdthresh_ << std::endl;
+              << "meank : " << meank << std::endl
+              << "stdthresh :" << stdthresh << std::endl;
     // this->meank = meank_;
     // this->stdthresh = stdthresh_;
     sor.setMeanK(meank);
     sor.setStddevMulThresh(stdthresh);
     // 单位
-    std::cout << "the Unit of Point cloud : " << unit_ << std::endl;
+    std::cout << "the Unit of Point cloud : " << unit << std::endl;
+    // this->unit = unit_;
+    // 全局点云
+    globalMap.reset(new pcl::PointCloud<pcl::PointXYZRGB>);
+    // 线程
+    viewerThread = make_unique<thread>(bind(&PointCloudMapping::viewer, this));
+} */
+
+PointCloudMapping(double resolution_,double meank_=10,double stdthresh_=1,double unit_=1000):resolution(resolution_),meank(meank_),stdthresh(stdthresh_),unit(unit_)
+{
+    std::cout<<"initializa with disp images !"<<std::endl;
+    // 体素采样
+    std::cout << "the resolution of Point cloud Voxel filter : " << resolution << std::endl;
+    // this->resolution = resolution_;
+    voxel.setLeafSize(resolution, resolution, resolution);
+    // 离群滤波
+    std::cout << "the Point cloud Outlier filter params :   \n"
+              << "meank : " << meank << std::endl
+              << "stdthresh :" << stdthresh << std::endl;
+    // this->meank = meank_;
+    // this->stdthresh = stdthresh_;
+    sor.setMeanK(meank);
+    sor.setStddevMulThresh(stdthresh);
+    // 单位
+    std::cout << "the Unit of Point cloud : " << unit << std::endl;
     // this->unit = unit_;
     // 全局点云
     globalMap.reset(new pcl::PointCloud<pcl::PointXYZRGB>);
@@ -41,11 +65,6 @@ PointCloudMapping(double resolution_,double meank_=10,double stdthresh_=1,double
 
 }
 
-PointCloudMapping::~PointCloudMapping()
-{
-    // 析构函数
-    // 确保线程正确终止和资源释放
-}
 void insertKeyFrame(KeyFrame *kf, cv::Mat &color, cv::Mat &depth,int idk,vector<KeyFrame*> vpKFs )
 {
     cout << "receive a keyframe, id = "<<idk <<"   "<< kf->mnId << endl;
