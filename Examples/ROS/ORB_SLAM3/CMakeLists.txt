@@ -37,7 +37,7 @@ find_package(OpenCV 3.2)
       message(FATAL_ERROR "OpenCV > 3.2 not found.")
    endif()
 
-find_package(Eigen3 3.1.0 REQUIRED)
+find_package(Eigen3 3.3.0 REQUIRED)
 find_package(Pangolin REQUIRED)
 
 include_directories(
@@ -49,8 +49,8 @@ ${PROJECT_SOURCE_DIR}/../../../Thirdparty/Sophus
 ${Pangolin_INCLUDE_DIRS}
 )
 
-set(LIBS 
-${OpenCV_LIBS} 
+set(LIBS
+${OpenCV_LIBS}
 ${EIGEN3_LIBS}
 ${Pangolin_LIBRARIES}
 ${PROJECT_SOURCE_DIR}/../../../Thirdparty/DBoW2/lib/libDBoW2.so
