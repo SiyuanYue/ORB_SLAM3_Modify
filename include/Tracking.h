@@ -42,7 +42,7 @@
 
 #include <mutex>
 #include <unordered_set>
-
+class PointCloudMapping;
 namespace ORB_SLAM3
 {
 

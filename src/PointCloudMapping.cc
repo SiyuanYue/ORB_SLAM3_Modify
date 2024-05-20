@@ -6,6 +6,7 @@
 #include "Converter.h"
 
 namespace ORB_SLAM3{
+
 pcl::PointXYZ pcl_transform(const Eigen::Matrix4f &pose, const Eigen::Vector3f &p)
 {
     pcl::PointXYZ pcl_p;
@@ -15,32 +16,7 @@ pcl::PointXYZ pcl_transform(const Eigen::Matrix4f &pose, const Eigen::Vector3f &
     return pcl::PointXYZ(e_p(0), e_p(1), e_p(2));
 }
 
-/*
-PointCloudMapping(double resolution_):resolution(resolution_),meank(10),stdthresh(1),unit(1000)
-{
-    std::cout<<"initializa with disp images !"<<std::endl;
-    // 体素采样
-    std::cout << "the resolution of Point cloud Voxel filter : " << resolution << std::endl;
-    // this->resolution = resolution_;
-    voxel.setLeafSize(resolution, resolution, resolution);
-    // 离群滤波
-    std::cout << "the Point cloud Outlier filter params :   \n"
-              << "meank : " << meank << std::endl
-              << "stdthresh :" << stdthresh << std::endl;
-    // this->meank = meank_;
-    // this->stdthresh = stdthresh_;
-    sor.setMeanK(meank);
-    sor.setStddevMulThresh(stdthresh);
-    // 单位
-    std::cout << "the Unit of Point cloud : " << unit << std::endl;
-    // this->unit = unit_;
-    // 全局点云
-    globalMap.reset(new pcl::PointCloud<pcl::PointXYZRGB>);
-    // 线程
-    viewerThread = make_unique<thread>(bind(&PointCloudMapping::viewer, this));
-} */
-
-PointCloudMapping(double resolution_,double meank_=10,double stdthresh_=1,double unit_=1000):resolution(resolution_),meank(meank_),stdthresh(stdthresh_),unit(unit_)
+PointCloudMapping(double resolution_,double meank_,double stdthresh_):resolution(resolution_),meank(meank_),stdthresh(stdthresh_),unit(1000)
 {
     std::cout<<"initializa with disp images !"<<std::endl;
     // 体素采样
@@ -105,9 +81,9 @@ PointCloud::Ptr GetPointCloud(KeyFrame *kf, cv::Mat &color, cv::Mat &depth)
             p.x = (n - kf->cx) * p.z / kf->fx;
             p.y = (m - kf->cy) * p.z / kf->fy;
 
-            p.b = color.ptr<uchar>(m)[n * 3];
+            p.b = color.ptr<uchar>(m)[n * 3 + 2];
             p.g = color.ptr<uchar>(m)[n * 3 + 1];
-            p.r = color.ptr<uchar>(m)[n * 3 + 2];
+            p.r = color.ptr<uchar>(m)[n * 3 ];
 
             tmp->points.push_back(p);
             }

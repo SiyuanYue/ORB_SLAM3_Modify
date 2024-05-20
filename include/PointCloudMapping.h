@@ -50,7 +50,7 @@ public:
     using PointCloud = pcl::PointCloud<pcl::PointXYZRGB>;
     //  ORB3_dense 构造函数
     //PointCloudMapping(double resolution_);
-    PointCloudMapping(double resolution_,double meank_=10,double stdthresh_=1,double unit_=1000);
+    PointCloudMapping(double resolution_, double meank_, double thresh_);
     
 
 
